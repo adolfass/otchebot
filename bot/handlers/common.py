@@ -118,34 +118,63 @@ async def cmd_start(message: Message, state: FSMContext):
     """Обработчик команды /start."""
     await state.clear()
 
+    user_id = message.from_user.id
+
+    # Если админ - показываем админ-панель
+    if user_id in settings.admin_ids_list:
+        welcome_text = (
+            "👋 <b>Добро пожаловать, администратор!</b>\n\n"
+            "Вы находитесь в панели управления ботом ОТЧЕБОТ."
+        )
+        
+        await message.answer(
+            welcome_text,
+            parse_mode="HTML",
+            reply_markup=get_admin_keyboard(),
+        )
+        logger.info(f"Admin {user_id} started the bot")
+        return
+
+    # Для обычных пользователей - приветствие с исповедью
     welcome_text = (
-        "✨ **Добро пожаловать в ОТЧЕБОТ!**\n\n"
+        "✨ <b>Добро пожаловать в ОТЧЕБОТ!</b>\n\n"
         "Это бот для сбора исповедей — свободных описаний проблем в IT-сфере.\n\n"
         "Ваши ответы помогут получить помощь от специалистов и улучшить сообщество.\n\n"
-        "_Все данные анонимны и используются только для обработки заявок._"
+        "<i>Все данные анонимны и используются только для обработки заявок.</i>"
     )
 
     await message.answer(
         welcome_text,
-        parse_mode="Markdown",
+        parse_mode="HTML",
         reply_markup=get_start_keyboard(),
     )
 
-    logger.info(f"User {message.from_user.id} started the bot")
+    logger.info(f"User {user_id} started the bot")
 
 
 @router.message(Command("help"))
 async def cmd_help(message: Message):
     """Обработчик команды /help."""
-    help_text = (
-        "📖 **Команды бота:**\n\n"
-        "/start - Начать новую исповедь\n"
-        "/admin - Админ-панель (только для администраторов)\n"
-        "/delete_my_data - Удалить все мои заявки\n"
-        "/help - Эта справка"
-    )
+    user_id = message.from_user.id
+    
+    if user_id in settings.admin_ids_list:
+        help_text = (
+            "📖 <b>Команды администратора:</b>\n\n"
+            "/start - Админ-панель\n"
+            "/admin - Админ-панель\n"
+            "/приветствие - Отправить приветствие в канал\n"
+            "/test_report - Тестовый отчёт\n"
+            "/help - Эта справка"
+        )
+    else:
+        help_text = (
+            "📖 <b>Команды бота:</b>\n\n"
+            "/start - Начать новую исповедь\n"
+            "/delete_my_data - Удалить все мои заявки\n"
+            "/help - Эта справка"
+        )
 
-    await message.answer(help_text, parse_mode="Markdown")
+    await message.answer(help_text, parse_mode="HTML")
 
 
 @router.message(Command("delete_my_data"))

@@ -9,7 +9,7 @@ from sqlalchemy import select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.pool import NullPool
 
-from bot.database.models import Complaint, ComplaintStatus
+from bot.database.models import Complaint, ComplaintStatus, MemberEvent, MemberEventType
 
 
 class Database:
@@ -180,3 +180,45 @@ class ComplaintCRUD:
         stats["total"] = total_result.scalar() or 0
 
         return stats
+
+
+class MemberEventCRUD:
+    """CRUD операции для событий участников."""
+
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def create(
+        self,
+        user_id: int,
+        event_type: MemberEventType,
+        chat_id: int,
+        username: Optional[str] = None,
+        first_name: Optional[str] = None,
+    ) -> MemberEvent:
+        """Создание нового события участника."""
+        event = MemberEvent(
+            user_id=user_id,
+            username=username,
+            first_name=first_name,
+            event_type=event_type,
+            chat_id=chat_id,
+        )
+        self.session.add(event)
+        await self.session.commit()
+        await self.session.refresh(event)
+        return event
+
+    async def get_count_since(
+        self, event_type: MemberEventType, since: datetime, chat_id: Optional[int] = None
+    ) -> int:
+        """Получение количества событий с момента."""
+        query = select(func.count()).where(
+            MemberEvent.event_type == event_type,
+            MemberEvent.created_at >= since,
+        )
+        if chat_id:
+            query = query.where(MemberEvent.chat_id == chat_id)
+        
+        result = await self.session.execute(query)
+        return result.scalar() or 0

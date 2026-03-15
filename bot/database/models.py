@@ -18,6 +18,13 @@ class ComplaintStatus(enum.Enum):
     PROCESSED = "processed"  # Обработана администратором
 
 
+class MemberEventType(enum.Enum):
+    """Типы событий с участниками."""
+
+    JOINED = "joined"
+    LEFT = "left"
+
+
 class Base(DeclarativeBase):
     """Базовый класс для всех моделей."""
 
@@ -68,3 +75,36 @@ class Complaint(Base):
 
     def __repr__(self) -> str:
         return f"<Complaint(id={self.id}, user_id={self.user_id}, status={self.status.value})>"
+
+
+class MemberEvent(Base):
+    """
+    Модель событий с участниками группы.
+
+    Атрибуты:
+        id: Уникальный идентификатор
+        user_id: Telegram ID пользователя
+        username: Username пользователя
+        first_name: Имя пользователя
+        event_type: Тип события (joined/left)
+        chat_id: ID чата/канала
+        created_at: Дата и время события
+    """
+
+    __tablename__ = "member_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    username: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    first_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    event_type: Mapped[MemberEventType] = mapped_column(
+        SQLEnum(MemberEventType, name="member_event_type", create_type=True),
+        nullable=False,
+    )
+    chat_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=False), default=datetime.utcnow, nullable=False
+    )
+
+    def __repr__(self) -> str:
+        return f"<MemberEvent(id={self.id}, user_id={self.user_id}, event_type={self.event_type.value})>"

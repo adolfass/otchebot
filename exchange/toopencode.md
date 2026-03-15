@@ -1,18 +1,36 @@
 # Инструкция для Opencode Agent
 
 **Версия протокола:** 1.0.0
-**Приоритет:** ВЫСОКИЙ
+**Приоритет:** КРИТИЧЕСКИЙ
 **Дата:** 2026-03-15
+**Статус:** Файлы загружены на сервер
 
 ---
 
-## 📋 ЗАДАЧА: Этап 1 - Настройка окружения и структуры проекта
+## 📋 ЗАДАЧА: Этап 1 - Деплой и запуск проекта
 
-Qwen Code завершил создание базовой структуры проекта ОТЧЕБОТ.
+Файлы проекта загружены на сервер `/project/otchebot`.
 
 ---
 
-## 📂 ЧТО БЫЛО СОЗДАНО
+## ✅ УЖЕ ВЫПОЛНЕНО
+
+- [x] Файлы проекта скопированы на сервер
+- [x] Права доступа настроены
+
+---
+
+## ⚠️ ВАЖНО: GITHUB РЕПОЗИТОРИЙ
+
+Репозиторий на GitHub **ЕЩЁ НЕ СОЗДАН**. Тебе нужно:
+
+1. Создать новый **приватный** репозиторий на GitHub (например: `otchebot` или `otche_bot`)
+2. Добавить SSH-ключ сервера в GitHub (Settings → SSH and GPG keys)
+3. Привязать локальный git к удалённому репозиторию
+
+---
+
+## 📂 СТРУКТУРА ПРОЕКТА
 
 ### Файлы конфигурации:
 - `.env.example` — пример переменных окружения
@@ -51,39 +69,44 @@ Qwen Code завершил создание базовой структуры п
 
 ---
 
-## 🚀 КОМАНДЫ ДЛЯ ВЫПОЛНЕНИЯ НА СЕРВЕРЕ
+## 🚀 КОМАНДЫ ДЛЯ ВЫПОЛНЕНИЯ
 
-### 1. Подготовка окружения
+### 1. Создание GitHub репозитория
 
 ```bash
-# Перейти в директорию проекта
+# 1.1 Создать репозиторий на GitHub (через веб-интерфейс или gh cli)
+# Название: otchebot (приватный)
+
+# 1.2 Проверить/добавить SSH ключ в GitHub
+cat ~/.ssh/id_ed25519.pub
+# Скопировать вывод и добавить в GitHub: Settings → SSH and GPG keys → New SSH key
+
+# 1.3 Инициализировать git (если ещё не инициализирован)
 cd /project/otchebot
+git status  # проверить статус
 
-# Инициализировать git репозиторий (если ещё не создан)
-git init
-git remote add origin git@github.com:your-repo/otchebot.git
+# 1.4 Добавить удалённый репозиторий (заменить YOUR_GITHUB_USERNAME на свой)
+git remote add origin git@github.com:YOUR_GITHUB_USERNAME/otchebot.git
 
-# Добавить все файлы
+# 1.5 Сделать коммит
 git add -A
-
-# Сделать первый коммит
 git commit -m "feat: initial project structure
 
 - Bot (aiogram 3.x) с FSM и антифлудом
 - API (FastAPI) с pull-механизмом
 - PostgreSQL + Alembic миграции
 - Docker контейнеризация
-- Скрипты репликации и бэкапов
+- Скрипты репликации и бэкапов"
 
-Co-authored-by: Qwen-Coder <qwen-coder@alibabacloud.com>"
-
-# Отправить на GitHub
+# 1.6 Отправить на GitHub
 git push -u origin main
 ```
 
 ### 2. Настройка переменных окружения
 
 ```bash
+cd /project/otchebot
+
 # Создать .env файл на основе .env.example
 cp .env.example .env
 
@@ -103,6 +126,8 @@ POSTGRES_PASSWORD=secure_password_here
 ### 3. Запуск через Docker Compose
 
 ```bash
+cd /project/otchebot
+
 # Запуск всех сервисов
 docker-compose up -d
 

@@ -76,7 +76,16 @@ async def handle_help_keywords(message: types.Message):
     text = message.text or ""
     keywords = ["помогите", "исповедь", "помощь", "help", "помощ"]
     
-    has_mention = any(mention.user.id == message.bot.id for mention in message.mentions) if message.mentions else False
+    bot_info = await message.bot.get_me()
+    has_mention = False
+    if message.entities:
+        for entity in message.entities:
+            if entity.type == "mention":
+                mention_text = text[entity.offset:entity.offset + entity.length]
+                if mention_text == f"@{bot_info.username}":
+                    has_mention = True
+                    break
+    
     has_keyword = any(kw in text.lower() for kw in keywords)
     has_bot_username = "@otchebot_bot" in text or "@otche_bot" in text
     

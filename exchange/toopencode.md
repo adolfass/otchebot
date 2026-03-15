@@ -1,200 +1,124 @@
 # Инструкция для Opencode Agent
 
-**Версия протокола:** 3.0.0
-**Приоритет:** КРИТИЧЕСКИЙ
+**Версия протокола:** 4.0.0
+**Приоритет:** ВЫСОКИЙ
 **Дата:** 2026-03-15
 
 ---
 
-## 📋 ЗАДАЧА: Новый функционал бота для группы комментариев
+## 📋 ЭТАП 4: Тестирование API для внешнего агента
 
-Бот добавлен как админ в группу комментариев канала.
-
----
-
-## 🎯 ТРЕБОВАНИЯ
-
-### 1. Приветствие новых участников
-
-**Событие:** Новый участник вступает в группу
-
-**Действие:**
-- Бот отправляет сообщение в группу
-- Кнопки:
-  - "✨ Пройти исповедь" → переход в ЛС бота (URL: https://t.me/otchebot_bot)
-  - "⏳ Позже" → удаляет приветственное сообщение
-
-### 2. Реакция на призывы о помощи
-
-**Триггеры в группе:**
-- Слова: "помогите", "исповедь", "помощь", "help"
-- Упоминание бота: `@otchebot_bot`
-
-**Действие:**
-1. Бот удаляет сообщение пользователя (чтобы не засорять чат)
-2. Отправляет в ЛС пользователю:
-   > "Я увидел ваш призыв о помощи. Давайте заполним форму исповеди..."
-
-### 3. Удаление упоминаний
-- Любое сообщение с `@otchebot_bot` → удаляется после обработки
-
----
-
-## 🔧 РЕАЛИЗАЦИЯ
-
-### 1. Создать `bot/handlers/group.py`
-
-```python
-"""
-Обработчики для группы комментариев канала.
-"""
-
-from aiogram import Router, F, types
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from aiogram.utils.keyboard import InlineKeyboardBuilder
-from bot.config import settings
-from bot.utils.logger import logger
-
-router = Router()
-
-GROUP_ID = None
-
-
-def get_welcome_keyboard() -> InlineKeyboardMarkup:
-    builder = InlineKeyboardBuilder()
-    builder.add(
-        InlineKeyboardButton(
-            text="✨ Пройти исповедь",
-            url="https://t.me/otchebot_bot"
-        )
-    )
-    builder.add(
-        InlineKeyboardButton(
-            text="⏳ Позже",
-            callback_data="welcome_later"
-        )
-    )
-    builder.adjust(2)
-    return builder.as_markup()
-
-
-@router.my_chat_member()
-async def bot_added_to_group(event: types.ChatMemberUpdated):
-    """Бот добавлен в группу/канал."""
-    if event.new_chat_member.status == "administrator":
-        logger.info(f"Бот добавлен как админ в чат: {event.chat.title} (ID: {event.chat.id})")
-        global GROUP_ID
-        GROUP_ID = event.chat.id
-
-
-@router.new_chat_members()
-async def new_member_joined(message: types.Message):
-    """Новый участник в группе."""
-    for member in message.new_chat_members:
-        if member.is_bot:
-            continue
-        
-        welcome_text = (
-            f"👋 Привет, {member.mention_html()}!\n\n"
-            "Я бот ОТЧЕБОТ — помогаю пользователям IT-сферы.\n\n"
-            "Если у вас есть проблема — пройдите исповедь."
-        )
-        
-        await message.answer(
-            welcome_text,
-            reply_markup=get_welcome_keyboard()
-        )
-        logger.info(f"Приветствие нового участника: {member.id}")
-
-
-@router.callback_query(F.data == "welcome_later")
-async def welcome_later_callback(callback: types.CallbackQuery):
-    """Пользователь нажал 'Позже'."""
-    await callback.message.delete()
-    await callback.answer("Хорошо, обращайтесь в любое время!")
-
-
-@router.message()
-async def handle_help_keywords(message: types.Message):
-    """Реакция на ключевые слова и упоминания в группе."""
-    if message.chat.type not in ["group", "supergroup"]:
-        return
-    
-    text = message.text or ""
-    keywords = ["помогите", "исповедь", "помощь", "help", "помощ"]
-    
-    has_mention = any(mention.user.id == message.bot.id for mention in message.mentions) if message.mentions else False
-    has_keyword = any(kw in text.lower() for kw in keywords)
-    has_bot_username = "@otchebot_bot" in text or "@otche_bot" in text
-    
-    if has_mention or has_keyword or has_bot_username:
-        try:
-            await message.delete()
-            logger.info(f"Удалено сообщение от {message.from_user.id}")
-        except Exception as e:
-            logger.warning(f"Не удалось удалить сообщение: {e}")
-        
-        help_text = (
-            "👋 Я увидел ваш призыв о помощи!\n\n"
-            "Давайте заполним форму исповеди — это поможет специалистам "
-            "лучше понять вашу проблему.\n\n"
-            "Нажмите /start или перейдите в бота: @otchebot_bot"
-        )
-        
-        try:
-            await message.bot.send_message(chat_id=message.from_user.id, text=help_text)
-            logger.info(f"Отправлена помощь пользователю {message.from_user.id}")
-        except Exception as e:
-            logger.warning(f"Не удалось отправить ЛС: {e}")
-```
-
-### 2. Подключить в `bot/main.py`
-
-Добавить импорт и подключить роутер:
-```python
-from bot.handlers.group import router as group_router
-dp.include_router(group_router)
-```
-
-### 3. Права админа
-
-Бот должен быть админом в группе с правами:
-- ✅ Удаление сообщений
+API уже реализован. Нужно протестировать все эндпоинты.
 
 ---
 
 ## 🧪 ТЕСТЫ
 
-1. **Приветствие:** Пригласи нового пользователя → бот приветствует
-2. **Кнопка "Позже":** Нажать → сообщение удаляется
-3. **"Помогите":** Написать в группе → сообщение удалено, бот прислал ЛС
-4. **Упоминание:** @otchebot_bot → сообщение удалено
+### Подготовка
+
+```bash
+# Получить API ключ
+API_KEY=$(grep EXTERNAL_API_KEY /project/otchebot/.env | cut -d'=' -f2)
+echo "API Key: $API_KEY"
+
+# Базовый URL
+API_URL="http://localhost:8000/api/v1"
+```
+
+### Тест 1: Health Check
+
+```bash
+curl http://localhost:8000/health
+```
+**Ожидается:** `{"status":"ok","version":"1.0.0"}`
+
+### Тест 2: Получить новые заявки
+
+```bash
+curl -H "X-API-Key: $API_KEY" "$API_URL/problems?status=new&limit=10&offset=0"
+```
+**Ожидается:** JSON с заявками (может быть пустой массив)
+
+### Тест 3: Получить заявку по ID
+
+```bash
+curl -H "X-API-Key: $API_KEY" "$API_URL/problems/1"
+```
+**Ожидается:** Объект заявки или 404
+
+### Тест 4: Пометить заявку как sent
+
+```bash
+curl -X POST -H "X-API-Key: $API_KEY" "$API_URL/problems/1/mark_sent"
+```
+**Ожидается:** `{"id":1,"status":"sent"}`
+
+### Тест 5: Неверный API ключ
+
+```bash
+curl -H "X-API-Key: wrong_key" "$API_URL/problems"
+```
+**Ожидается:** 401 Unauthorized
+
+### Тест 6: Без API ключа
+
+```bash
+curl "$API_URL/problems"
+```
+**Ожидается:** 401 Unauthorized
+
+### Тест 7: Пагинация
+
+```bash
+# Страница 1
+curl -H "X-API-Key: $API_KEY" "$API_URL/problems?limit=5&offset=0"
+
+# Страница 2
+curl -H "X-API-Key: $API_KEY" "$API_URL/problems?limit=5&offset=5"
+```
+
+### Тест 8: Фильтр по статусу
+
+```bash
+curl -H "X-API-Key: $API_KEY" "$API_URL/problems?status=processed"
+curl -H "X-API-Key: $API_KEY" "$API_URL/problems?status=sent"
+```
+
+### Тест 9: mark_as_sent=true в GET запросе
+
+```bash
+curl -H "X-API-Key: $API_KEY" "$API_URL/problems?mark_as_sent=true&limit=1"
+```
+**Ожидается:** Заявки автоматически помечаются как sent
 
 ---
 
 ## 📝 ОТЧЁТ
 
+Создай отчёт в `exchange/toQwen.md`:
+
 ```markdown
 # Отчёт Opencode Agent
 
-## Задача: Функционал для группы
-
-## Выполнено:
-- [ ] bot/handlers/group.py создан
-- [ ] Подключен в main.py
-- [ ] Бот перезапущен
-- [ ] Бот - админ в группе
+## Задача: Этап 4 - Тестирование API
 
 ## Тесты:
-- Приветствие: ✅/❌
-- Кнопка "Позже": ✅/❌
-- Ключевые слова: ✅/❌
-- Упоминание: ✅/❌
+- Health Check: ✅/❌
+- GET /problems: ✅/❌
+- GET /problems/{id}: ✅/❌
+- POST /problems/{id}/mark_sent: ✅/❌
+- Неверный ключ (401): ✅/❌
+- Без ключа (401): ✅/❌
+- Пагинация: ✅/❌
+- Фильтр по статусу: ✅/❌
+- mark_as_sent: ✅/❌
 
-## ID группы:
-[узнать]
+## Пример ответа API:
+```json
+{...}
+```
 
-## Версия протокола: 3.0.1
+## Версия протокола: 4.0.1
 ## Статус: [ГОТОВО / ПРОБЛЕМЫ]
 ```
 

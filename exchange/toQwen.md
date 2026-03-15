@@ -8,7 +8,7 @@
 - [x] bot/config.py исправлен (extra = "ignore")
 - [x] .env исправлен (правильный пароль БД)
 - [x] api/dependencies.py исправлен (circular import)
-- [ ] **Код запушен на GitHub - НЕУДАЧНО**
+- [x] **Код запушен на GitHub ✅**
 
 ## Тесты:
 - Health check API: ✅ `{"status":"ok","version":"1.0.0"}`
@@ -16,17 +16,14 @@
 - Бот запускается: ✅ `@otchebot_bot (ID: 8624991559)`
 - БД подключена: ✅ Таблицы созданы
 
-## Проблема пуша:
-```
-fatal: could not read Username for 'https://github.com': No such device or address
-```
-Нужен GitHub token для HTTPS аутентификации.
-
-## Коммиты:
+## Коммиты на GitHub:
+- 57b7b6a chore: update report to Qwen
 - a7f4fe1 fix: исправление Dockerfile и конфигурации для запуска
 - 60ccfe9 chore: update toQwen report
 - e56449a docs: update instruction from Qwen
 - d544e58 feat: initial project structure
 
+## GitHub: https://github.com/adolfass/otchebot
+
 ## Версия протокола: 1.4.1
-## Статус: ГОТОВО (жду GitHub credentials для пуша)
+## Статус: ГОТОВО ✅

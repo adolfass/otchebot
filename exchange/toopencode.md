@@ -1,95 +1,78 @@
 # Инструкция для Opencode Agent
 
-**Версия протокола:** 1.6.0
-**Приоритет:** КРИТИЧЕСКИЙ
+**Версия протокола:** 2.0.0
+**Приоритет:** ВЫСОКИЙ
 **Дата:** 2026-03-15
 
 ---
 
-## 📋 ЗАДАЧА: Исправление Dockerfile.api и перезапуск
+## 📋 ЭТАП 2: Тестирование базового функционала бота
+
+Код бота уже реализован. Нужно протестировать все сценарии.
 
 ---
 
-## 🐛 ПРОБЛЕМА
+## 🧪 ТЕСТЫ ДЛЯ ПРОВЕРКИ
 
-API не запускается: `ModuleNotFoundError: No module named 'bot'`
+### Тест 1: Команда /start
 
----
+1. Открой Telegram
+2. Найди бота @otchebot_bot
+3. Отправь `/start`
+4. **Ожидается:**
+   - Приветственное сообщение
+   - Кнопка "✨ Начать исповедь"
 
-## ✅ ШАГ 1: ИСПРАВЬ Dockerfile.api
+### Тест 2: Начало исповеди
+
+1. Нажми кнопку "✨ Начать исповедь"
+2. **Ожидается:**
+   - Сообщение с просьбой ввести текст проблемы
+   - Информация о лимите 500 символов
+
+### Тест 3: Отправка текста
+
+1. Введи текст: "У меня не работает принтер"
+2. **Ожидается:**
+   - Запрос согласия на сбор данных
+   - Кнопки "✅ Согласен" и "❌ Отмена"
+
+### Тест 4: Согласие на данные
+
+1. Нажми "✅ Согласен"
+2. **Ожидается:**
+   - Сообщение: "Ваша заявка принята!..."
+   - Информация о тестовом режиме (до 2 суток)
+
+### Тест 5: Антифлуд
+
+1. Снова нажми "✨ Начать исповедь" сразу
+2. **Ожидается:**
+   - Сообщение о необходимости подождать
+
+### Тест 6: Админ-панель
+
+1. Отправь `/admin` (с аккаунта 511017697)
+2. **Ожидается:**
+   - Меню с кнопками "📨 Новые заявки" и "📊 Статистика"
+
+### Тест 7: Просмотр заявок
+
+1. Нажми "📨 Новые заявки"
+2. **Ожидается:**
+   - Карточка заявки с данными пользователя
+
+### Тест 8: API запрос
 
 ```bash
-cd /project/otchebot
+# Получить API ключ из .env
+API_KEY=$(grep EXTERNAL_API_KEY /project/otchebot/.env | cut -d'=' -f2)
 
-cat > Dockerfile.api << 'EOF'
-FROM python:3.11-slim
-
-WORKDIR /app
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONPATH=/app
-
-EXPOSE 8000
-
-CMD ["uvicorn", "api.server:app", "--host", "0.0.0.0", "--port", "8000"]
-EOF
+# Тестовый запрос
+curl -H "X-API-Key: $API_KEY" "http://localhost:8000/api/v1/problems?status=new"
 ```
 
----
-
-## 🚀 ШАГ 2: ПЕРЕЗАПУСК DOCKER COMPOSE
-
-```bash
-cd /project/otchebot
-
-# Пересобрать API
-docker-compose up -d --build api
-
-# Проверить
-docker-compose ps
-docker-compose logs api
-```
-
----
-
-## 📝 ШАГ 3: ПРОВЕРКИ
-
-```bash
-# API Health check (из контейнера)
-docker-compose exec api curl http://localhost:8000/health
-
-# Или напрямую
-curl http://89.125.53.65:8000/health
-
-# Бот
-docker-compose logs bot | tail -20
-```
-
----
-
-## 🔄 ШАГ 4: GIT PUSH
-
-```bash
-cd /project/otchebot
-
-git config user.email "romabo51@gmail.com"
-git config user.name "adolfass"
-
-git add -A
-git commit -m "fix: Dockerfile.api и PYTHONPATH"
-git push origin main
-```
+**Ожидается:** JSON с заявками
 
 ---
 
@@ -100,19 +83,26 @@ git push origin main
 ```markdown
 # Отчёт Opencode Agent
 
-## Задача: Исправление Dockerfile.api
-
-## Выполнено:
-- [ ] Dockerfile.api исправлен
-- [ ] API работает
-- [ ] Изменения запушены
+## Задача: Этап 2 - Тестирование бота
 
 ## Тесты:
-- API Health: ✅/❌
-- Бот работает: ✅/❌
+- /start: ✅/❌
+- Начало исповеди: ✅/❌
+- Отправка текста: ✅/❌
+- Согласие: ✅/❌
+- Антифлуд: ✅/❌
+- /admin: ✅/❌
+- Просмотр заявок: ✅/❌
+- API: ✅/❌
 
-## Версия протокола: 1.6.1
-## Статус: [ГОТОВО / ПРОБЛЕМЫ]
+## Проблемы:
+[если есть]
+
+## Скриншоты:
+[если есть]
+
+## Версия протокола: 2.0.1
+## Статус: [ГОТОВО / ТРЕБУЕТ ИСПРАВЛЕНИЯ]
 ```
 
 ---

@@ -137,26 +137,41 @@ async def welcome_later_callback(callback: types.CallbackQuery):
 @router.message()
 async def handle_help_keywords(message: types.Message):
     """Реакция на ключевые слова и упоминания в группе."""
-    if message.chat.type not in ["group", "supergroup"]:
+    # Бот работает в группе, супергруппе и канале
+    if message.chat.type not in ["group", "supergroup", "channel"]:
         return
     
     text = message.text or ""
-    keywords = ["помогите", "исповедь", "помощь", "help", "помощ"]
     
+    # Только явные триггеры: /help, #help, help или @mention бота
+    has_trigger = False
+    
+    # Проверяем команду /help
+    if text.startswith("/help"):
+        has_trigger = True
+    
+    # Проверяем #help
+    if "#help" in text.lower():
+        has_trigger = True
+    
+    # Проверяем слово help (отдельно стоящее)
+    import re
+    if re.search(r'\bhelp\b', text.lower()):
+        has_trigger = True
+    
+    # Проверяем упоминание @otchebot_bot
     bot_info = await message.bot.get_me()
-    has_mention = False
     if message.entities:
         for entity in message.entities:
             if entity.type == "mention":
                 mention_text = text[entity.offset:entity.offset + entity.length]
                 if mention_text == f"@{bot_info.username}":
-                    has_mention = True
+                    has_trigger = True
                     break
     
-    has_keyword = any(kw in text.lower() for kw in keywords)
     has_bot_username = "@otchebot_bot" in text or "@otche_bot" in text
     
-    if has_mention or has_keyword or has_bot_username:
+    if has_trigger or has_bot_username:
         try:
             await message.delete()
             logger.info(f"Удалено сообщение от {message.from_user.id}")

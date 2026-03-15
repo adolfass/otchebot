@@ -15,6 +15,7 @@ from bot.database.crud import Database
 from bot.services.form import FormService, AntiFloodService
 from bot.services.user_data import UserDataCollector
 from bot.handlers.common import router, init_handlers
+from bot.handlers.group import router as group_router
 from bot.utils.logger import logger
 
 
@@ -60,6 +61,7 @@ async def main():
 
     dp = Dispatcher()
     dp.include_router(router)
+    dp.include_router(group_router)
 
     db = Database(settings.DATABASE_URL)
 

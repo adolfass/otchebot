@@ -11,7 +11,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.config import settings
 from bot.database.crud import Database
-from api.server import db
+
+
+def get_db() -> Database:
+    """Get database instance from server module."""
+    from api.server import db
+    return db
 
 
 # API Key авторизация
@@ -52,5 +57,6 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     Yields:
         AsyncSession: Сессия БД
     """
+    db = get_db()
     async with db.async_session_factory() as session:
         yield session

@@ -1,49 +1,94 @@
 # Инструкция для Opencode Agent
 
-**Версия протокола:** 1.2.0
+**Версия протокола:** 1.6.0
 **Приоритет:** КРИТИЧЕСКИЙ
 **Дата:** 2026-03-15
 
 ---
 
-## 📋 ЗАДАЧА: Пуш кода на GitHub
-
-Репозиторий создан: https://github.com/adolfass/otchebot
+## 📋 ЗАДАЧА: Исправление Dockerfile.api и перезапуск
 
 ---
 
-## 🚀 ВЫПОЛНИ ПУШ КОДА
+## 🐛 ПРОБЛЕМА
+
+API не запускается: `ModuleNotFoundError: No module named 'bot'`
+
+---
+
+## ✅ ШАГ 1: ИСПРАВЬ Dockerfile.api
 
 ```bash
 cd /project/otchebot
 
-# Настроить git
-git config user.email "romabo51@gmail.com"
-git config user.name "adolfass"
+cat > Dockerfile.api << 'EOF'
+FROM python:3.11-slim
 
-# Проверить remote (должен быть origin)
-git remote -v
+WORKDIR /app
 
-# Если нет remote - добавить
-git remote add origin git@github.com:adolfass/otchebot.git
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Переименовать ветку в main
-git branch -M main
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Запушить код
-git push -u origin main
+COPY . .
+
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONPATH=/app
+
+EXPOSE 8000
+
+CMD ["uvicorn", "api.server:app", "--host", "0.0.0.0", "--port", "8000"]
+EOF
 ```
 
 ---
 
-## ✅ ПРОВЕРКА
+## 🚀 ШАГ 2: ПЕРЕЗАПУСК DOCKER COMPOSE
 
 ```bash
-# Проверить коммиты на GitHub
-gh repo view adolfass/otchebot
+cd /project/otchebot
 
-# Или curl
-curl -s https://api.github.com/repos/adolfass/otchebot/commits | head -20
+# Пересобрать API
+docker-compose up -d --build api
+
+# Проверить
+docker-compose ps
+docker-compose logs api
+```
+
+---
+
+## 📝 ШАГ 3: ПРОВЕРКИ
+
+```bash
+# API Health check (из контейнера)
+docker-compose exec api curl http://localhost:8000/health
+
+# Или напрямую
+curl http://89.125.53.65:8000/health
+
+# Бот
+docker-compose logs bot | tail -20
+```
+
+---
+
+## 🔄 ШАГ 4: GIT PUSH
+
+```bash
+cd /project/otchebot
+
+git config user.email "romabo51@gmail.com"
+git config user.name "adolfass"
+
+git add -A
+git commit -m "fix: Dockerfile.api и PYTHONPATH"
+git push origin main
 ```
 
 ---
@@ -55,16 +100,18 @@ curl -s https://api.github.com/repos/adolfass/otchebot/commits | head -20
 ```markdown
 # Отчёт Opencode Agent
 
-## Задача: Пуш кода на GitHub
+## Задача: Исправление Dockerfile.api
 
 ## Выполнено:
-- [ ] Код запушен на GitHub
-- [ ] Репозиторий: https://github.com/adolfass/otchebot
+- [ ] Dockerfile.api исправлен
+- [ ] API работает
+- [ ] Изменения запушены
 
-## Коммиты:
-- [список коммитов]
+## Тесты:
+- API Health: ✅/❌
+- Бот работает: ✅/❌
 
-## Версия протокола: 1.2.1
+## Версия протокола: 1.6.1
 ## Статус: [ГОТОВО / ПРОБЛЕМЫ]
 ```
 

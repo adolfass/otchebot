@@ -15,11 +15,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Копирование кода API
 COPY api/ ./api/
+COPY bot/ ./bot/
 COPY alembic/ ./alembic/
 
 # Переменная окружения для Python (буферизация вывода)
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONPATH=/app
 
 # Порт для API сервера
 EXPOSE 8000

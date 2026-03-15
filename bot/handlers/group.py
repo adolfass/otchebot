@@ -45,9 +45,13 @@ async def bot_added_to_group(event: types.ChatMemberUpdated):
     """Бот добавлен/удален из группы/канала."""
     global GROUP_ID
     
+    # Импорт для избежания циклической зависимости
+    from bot.handlers.common import set_channel_id
+    
     if event.new_chat_member.status == "administrator":
         logger.info(f"Бот добавлен как админ в чат: {event.chat.title} (ID: {event.chat.id})")
         GROUP_ID = event.chat.id
+        set_channel_id(event.chat.id)
     elif event.new_chat_member.status == "left" or event.new_chat_member.status == "kicked":
         logger.info(f"Бот удален из чата: {event.chat.title} (ID: {event.chat.id})")
         GROUP_ID = None

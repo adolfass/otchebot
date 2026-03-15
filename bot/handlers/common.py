@@ -31,6 +31,15 @@ db: Database = None
 form_service: FormService = None
 user_data_collector: UserDataCollector = None
 
+# ID канала для приветствия
+CHANNEL_ID = None
+
+
+def set_channel_id(chat_id: int):
+    """Установка ID канала."""
+    global CHANNEL_ID
+    CHANNEL_ID = chat_id
+
 
 def init_handlers(
     database: Database,
@@ -178,6 +187,78 @@ async def cmd_admin(message: Message):
     )
 
     logger.info(f"Admin {user_id} opened admin panel")
+
+
+@router.message(Command("приветствие"))
+async def cmd_greeting(message: Message):
+    """Отправка приветственного сообщения в канал."""
+    global CHANNEL_ID
+    
+    if message.from_user.id not in settings.admin_ids_list:
+        await message.answer("❌ Доступ запрещён.")
+        return
+    
+    if CHANNEL_ID is None:
+        await message.answer("❌ Канал не настроен. Добавьте бота в канал как админа.")
+        return
+    
+    greeting_text = """🎉 *Добрый день, подписчики!* 👋
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✨ *Рад приветствовать вас на канале* **IT ПРОПОВЕДНИК**!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📢 *Я — бот для приёма исповедей* от пользователей о наболевшем из мира **IT**.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 *Что я принимаю:*
+• Жалобы и проблемы с техникой
+• Вопросы про сайты, боты, программы
+• Просьбы о помощи в IT-сфере
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 *Примеры:*
+
+▸ «У меня не работает принтер, айтишник говорит — нужно покупать новый! А я подозреваю, что меня пытаются обмануть! *Помогите!*»
+
+▸ «Мне нужен сайт! *Сколько это будет стоить?*»
+
+▸ «Мне нужен бот для бизнеса! *Помогите!*»
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 *Ваши заявки будут обработаны* — мы разберёмся, какие проблемы беспокоят предпринимателей и найдём решение вместе!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🚀 *КАК ПОЛЬЗОВАТЬСЯ:*
+1️⃣ Нажмите кнопку ниже
+2️⃣ Перейдите к @otchebot_bot  
+3️⃣ Нажмите /start
+4️⃣ Опишите вашу проблему
+5️⃣ Подтвердите отправку
+
+*Всё просто — справится даже ребёнок!* 👶
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━"""
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="✨ Начать исповедь", url="https://t.me/otchebot_bot")]
+        ]
+    )
+    
+    try:
+        await message.bot.send_message(chat_id=CHANNEL_ID, text=greeting_text, reply_markup=keyboard, parse_mode="Markdown")
+        await message.answer("✅ Приветственное сообщение отправлено в канал!")
+        logger.info(f"Приветствие отправлено в канал {CHANNEL_ID}")
+    except Exception as e:
+        await message.answer(f"❌ Ошибка: {e}")
+        logger.error(f"Не удалось отправить приветствие: {e}")
 
 
 @router.message(F.text == "✨ Начать исповедь")

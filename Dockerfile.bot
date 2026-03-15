@@ -1,0 +1,25 @@
+# Dockerfile для Telegram Bot
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Установка системных зависимостей
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Копирование requirements и установка Python-зависимостей
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Копирование кода бота
+COPY bot/ ./bot/
+COPY alembic/ ./alembic/
+
+# Переменная окружения для Python (буферизация вывода)
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Запуск бота
+CMD ["python", "bot/main.py"]

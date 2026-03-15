@@ -1,0 +1,41 @@
+# Telegram Bot Framework
+aiogram>=3.4.0
+
+# Web Framework (API Server)
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+
+# Database
+sqlalchemy[asyncio]>=2.0.25
+asyncpg>=0.29.0
+alembic>=1.13.1
+
+# Environment Variables
+python-dotenv>=1.0.0
+
+# HTTP Client (for Telegram API and external requests)
+aiohttp>=3.9.1
+requests>=2.31.0
+
+# SSH and File Transfer (for backup scripts)
+paramiko>=3.4.0
+scp>=0.14.5
+
+# Testing
+pytest>=7.4.4
+pytest-asyncio>=0.23.3
+pytest-cov>=4.1.0
+httpx>=0.26.0
+
+# Code Quality (optional, for development)
+black>=24.1.0
+flake8>=7.0.0
+isort>=5.13.2
+mypy>=1.8.0
+
+# Logging and Monitoring
+python-json-logger>=2.0.7
+
+# Validation
+pydantic>=2.5.3
+pydantic-settings>=2.1.0

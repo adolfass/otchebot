@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  # Telegram Bot Service
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    container_name: otchebot_bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - otchebot_network
+    volumes:
+      - ./bot:/app/bot:ro
+      - ./alembic:/app/alembic:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # API Server Service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: otchebot_api
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    networks:
+      - otchebot_network
+    volumes:
+      - ./api:/app/api:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14-alpine
+    container_name: otchebot_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: otchebot
+      POSTGRES_USER: otchebot_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure_password_here}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-replication.sql:/docker-entrypoint-initdb.d/init-replication.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - otchebot_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U otchebot_user -d otchebot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Nginx Reverse Proxy (optional, for HTTPS in production)
+  nginx:
+    image: nginx:alpine
+    container_name: otchebot_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - api
+    networks:
+      - otchebot_network
+    profiles:
+      - production
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  otchebot_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local

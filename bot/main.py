@@ -1,0 +1,101 @@
+"""
+Главный файл запуска Telegram бота.
+"""
+
+import asyncio
+import signal
+import sys
+
+from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
+
+from bot.config import settings
+from bot.database.crud import Database
+from bot.services.form import FormService, AntiFloodService
+from bot.services.user_data import UserDataCollector
+from bot.handlers.common import router, init_handlers
+from bot.utils.logger import logger
+
+
+# Глобальные объекты
+bot: Bot = None
+dp: Dispatcher = None
+db: Database = None
+
+
+async def on_startup():
+    """Действия при запуске бота."""
+    logger.info("Бот запускается...")
+
+    # Создание таблиц БД
+    await db.create_tables()
+    logger.info("Таблицы БД созданы/проверены")
+
+    # Информация о боте
+    bot_info = await bot.get_me()
+    logger.info(f"Бот запущен: @{bot_info.username} (ID: {bot_info.id})")
+
+
+async def on_shutdown():
+    """Действия при остановке бота."""
+    logger.info("Бот останавливается...")
+
+    # Закрытие соединений
+    await db.close()
+    await bot.session.close()
+
+    logger.info("Бот остановлен")
+
+
+async def main():
+    """Основная функция запуска."""
+    global bot, dp, db
+
+    # Инициализация компонентов
+    bot = Bot(
+        token=settings.BOT_TOKEN,
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+    )
+
+    dp = Dispatcher()
+    dp.include_router(router)
+
+    db = Database(settings.DATABASE_URL)
+
+    # Инициализация сервисов
+    antiflood_service = AntiFloodService(interval_seconds=settings.ANTIFLOOD_INTERVAL)
+    form_service = FormService(antiflood_service)
+    user_data_collector = UserDataCollector(bot)
+
+    # Инициализация хендлеров
+    init_handlers(db, form_service, user_data_collector)
+
+    # Регистрация хендлеров запуска/остановки
+    dp.startup.register(on_startup)
+    dp.shutdown.register(on_shutdown)
+
+    # Запуск polling
+    logger.info("Запуск polling...")
+    await dp.start_polling(bot)
+
+
+def signal_handler(sig, frame):
+    """Обработчик сигналов завершения."""
+    logger.info(f"Получен сигнал {sig}, завершение работы...")
+    asyncio.create_task(on_shutdown())
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    # Регистрация обработчиков сигналов
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Остановка бота (KeyboardInterrupt)")
+    except Exception as e:
+        logger.exception(f"Критическая ошибка: {e}")
+        sys.exit(1)

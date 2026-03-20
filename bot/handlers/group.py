@@ -2,6 +2,8 @@
 Обработчики для группы комментариев канала.
 """
 
+import asyncio
+
 from aiogram import Router, F, types
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -15,6 +17,8 @@ router = Router()
 GROUP_ID = None
 db: Database = None
 
+WELCOME_AUTO_DELETE_DELAY = 60
+
 
 def init_group_handlers(database: Database):
     """Инициализация БД для группы."""
@@ -27,7 +31,7 @@ def get_welcome_keyboard() -> InlineKeyboardMarkup:
     builder.add(
         InlineKeyboardButton(
             text="✨ Пройти исповедь",
-            url="https://t.me/otchebot_bot"
+            callback_data="welcome_confession"
         )
     )
     builder.add(
@@ -38,6 +42,16 @@ def get_welcome_keyboard() -> InlineKeyboardMarkup:
     )
     builder.adjust(2)
     return builder.as_markup()
+
+
+async def delete_after_delay(message: types.Message, delay: int) -> None:
+    """Удалить сообщение через заданную задержку."""
+    await asyncio.sleep(delay)
+    try:
+        await message.delete()
+        logger.info(f"Автоскрытие приветствия: message_id={message.message_id}")
+    except Exception as e:
+        logger.warning(f"Не удалось удалить сообщение: {e}")
 
 
 @router.my_chat_member()
@@ -120,10 +134,13 @@ async def new_member_joined(message: types.Message):
             "Если у вас есть проблема — пройдите исповедь."
         )
         
-        await message.answer(
+        sent_message = await message.answer(
             welcome_text,
             reply_markup=get_welcome_keyboard()
         )
+        
+        asyncio.create_task(delete_after_delay(sent_message, WELCOME_AUTO_DELETE_DELAY))
+        
         logger.info(f"Приветствие нового участника: {member.id}")
 
 
@@ -132,6 +149,28 @@ async def welcome_later_callback(callback: types.CallbackQuery):
     """Пользователь нажал 'Позже'."""
     await callback.message.delete()
     await callback.answer("Хорошо, обращайтесь в любое время!")
+
+
+@router.callback_query(F.data == "welcome_confession")
+async def welcome_confession_callback(callback: types.CallbackQuery):
+    """Пользователь нажал 'Пройти исповедь'."""
+    await callback.message.delete()
+    
+    help_text = (
+        "✨ Добро пожаловать в ОТЧЕБОТ!\n\n"
+        "Нажмите /start чтобы начать исповедь."
+    )
+    
+    try:
+        await callback.bot.send_message(
+            chat_id=callback.from_user.id,
+            text=help_text
+        )
+        logger.info(f"Отправлена инструкция пользователю {callback.from_user.id}")
+    except Exception as e:
+        logger.warning(f"Не удалось отправить ЛС пользователю {callback.from_user.id}: {e}")
+    
+    await callback.answer()
 
 
 @router.message()

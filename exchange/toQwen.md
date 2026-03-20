@@ -1,37 +1,39 @@
 # Отчёт Opencode Agent
 
-## Задача: Этап 4 - Тестирование API
+## Задача: Улучшение функционала приветствий (версия протокола 5.0.0)
+
+## Выполнено:
+- [x] Таймер на 60 секунд — `delete_after_delay()` в group.py
+- [x] Кнопка "Пройти исповедь" (callback) — `welcome_confession_callback()`
+- [x] Кнопка "Позже" (удаление) — `welcome_later_callback()`
+- [x] Админ-кнопка "Отправить приветствие" — создан `admin.py`
+
+## Изменённые файлы:
+1. **bot/handlers/group.py**
+   - Добавлен `asyncio` import
+   - Добавлена константа `WELCOME_AUTO_DELETE_DELAY = 60`
+   - Функция `delete_after_delay()` — удаляет сообщение через delay
+   - Обновлена `get_welcome_keyboard()` — callback_data вместо url
+   - Обновлён `new_member_joined()` — запускает таймер через `asyncio.create_task()`
+   - Добавлен `welcome_confession_callback()` — удаляет сообщение, отправляет инструкцию в ЛС
+
+2. **bot/handlers/admin.py** (новый файл)
+   - `AdminSendWelcomeStates` — FSM состояние
+   - `admin_send_welcome_start()` — обработка callback "admin_send_welcome"
+   - `process_welcome_target()` — обработка пересланного сообщения/ID
+   - Поддержка: forward, reply, числовой ID
+
+3. **bot/handlers/common.py**
+   - Обновлена `get_admin_keyboard()` — добавлена кнопка "📢 Отправить приветствие"
+
+4. **bot/main.py**
+   - Добавлен import `admin_router`
+   - Подключён роутер: `dp.include_router(admin_router)`
 
 ## Тесты:
-- Health Check: ✅ `{"status":"ok","version":"1.0.0"}`
-- GET /problems: ✅ Возвращает JSON с заявками
-- GET /problems/{id}: ✅ Возвращает заявку по ID
-- POST /problems/{id}/mark_sent: ✅ `{"id":1,"status":"sent"}`
-- Неверный ключ (401): ✅ `{"detail":"Невалидный API ключ"}`
-- Без ключа (401): ✅ `{"detail":"API ключ не предоставлен"}`
-- Пагинация: ✅ Работает корректно
-- Фильтр по статусу: ✅ Работает (new, sent, processed)
-- mark_as_sent: ✅ Автоматически помечает как sent
+- Автоскрытие через 60 сек: требует ручного тестирования
+- Кнопки работают: требует ручного тестирования
+- Админ отправка: требует ручного тестирования
 
-## Пример ответа API:
-```json
-{
-  "items":[
-    {
-      "id":1,
-      "user_id":511017697,
-      "username":"yesfutureman",
-      "first_name":"Роман",
-      "text":"у меня не работает принтер...",
-      "status":"new",
-      "created_at":"2026-03-15T09:10:24.013886"
-    }
-  ],
-  "total":4,
-  "limit":10,
-  "offset":0
-}
-```
-
-## Версия протокола: 4.0.1
+## Версия протокола: 5.0.1
 ## Статус: ГОТОВО ✅

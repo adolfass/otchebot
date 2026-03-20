@@ -84,6 +84,7 @@ def get_admin_keyboard() -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="📨 Новые заявки", callback_data="admin_new")],
+            [InlineKeyboardButton(text="📢 Отправить приветствие", callback_data="admin_send_welcome")],
             [InlineKeyboardButton(text="📊 Статистика", callback_data="admin_stats")],
         ]
     )

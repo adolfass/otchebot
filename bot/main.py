@@ -19,6 +19,7 @@ from bot.services.scheduler import DailyReportScheduler
 from bot.handlers.common import router, init_handlers
 from bot.handlers.group import router as group_router, init_group_handlers
 from bot.handlers.admin import router as admin_router
+from bot.handlers.context import set_channel_id
 from bot.utils.logger import logger
 
 

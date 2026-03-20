@@ -11,6 +11,7 @@ from bot.config import settings
 from bot.database.crud import Database, MemberEventCRUD
 from bot.database.models import MemberEventType
 from bot.utils.logger import logger
+from bot.handlers.context import set_channel_id
 
 router = Router()
 
@@ -58,9 +59,6 @@ async def delete_after_delay(message: types.Message, delay: int) -> None:
 async def bot_added_to_group(event: types.ChatMemberUpdated):
     """Бот добавлен/удален из группы/канала."""
     global GROUP_ID
-    
-    # Импорт для избежания циклической зависимости
-    from bot.handlers.common import set_channel_id
     
     if event.new_chat_member.status == "administrator":
         logger.info(f"Бот добавлен как админ в чат: {event.chat.title} (ID: {event.chat.id})")

@@ -21,6 +21,7 @@ from bot.services.form import ConfessionStates, FormService, AntiFloodService
 from bot.services.user_data import UserDataCollector
 from bot.utils.logger import logger
 from bot.utils.validators import validate_confession_text, sanitize_text
+from bot.handlers.context import set_channel_id
 
 
 # Создаём роутеры
@@ -30,15 +31,6 @@ router = Router()
 db: Database = None
 form_service: FormService = None
 user_data_collector: UserDataCollector = None
-
-# ID канала для приветствия
-CHANNEL_ID = None
-
-
-def set_channel_id(chat_id: int):
-    """Установка ID канала."""
-    global CHANNEL_ID
-    CHANNEL_ID = chat_id
 
 
 def init_handlers(

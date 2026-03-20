@@ -66,6 +66,12 @@ class Settings(BaseSettings):
         description="Интервал антифлуда в секундах",
     )
 
+    # Channel ID for greetings
+    CHANNEL_ID: int = Field(
+        default=0,
+        description="ID канала для отправки приветствий (заполняется автоматически при добавлении бота как админа)",
+    )
+
     # Application
     APP_NAME: str = "OTCHEBOT"
     VERSION: str = "1.0.0"

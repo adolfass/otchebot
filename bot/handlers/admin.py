@@ -7,7 +7,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 
 from bot.config import settings
 from bot.utils.logger import logger
-from bot.handlers.context import CHANNEL_ID
+from bot.handlers.context import get_channel_id
 
 
 router = Router()
@@ -82,21 +82,22 @@ async def admin_send_welcome(callback: CallbackQuery):
         await callback.answer("❌ Доступ запрещён", show_alert=True)
         return
 
-    if CHANNEL_ID is None:
-        await callback.message.answer("❌ Канал не настроен. Добавьте бота в канал как админа.")
+    channel_id = get_channel_id()
+    if channel_id is None:
+        await callback.message.answer("❌ Канал не настроен. Добавьте бота в канал как админа или укажите CHANNEL_ID в .env.")
         await callback.answer()
         return
 
     try:
         greeting_text = get_channel_greeting_text()
         await callback.bot.send_message(
-            chat_id=CHANNEL_ID,
+            chat_id=channel_id,
             text=greeting_text,
             reply_markup=get_channel_keyboard(),
             parse_mode="HTML"
         )
         await callback.message.answer("✅ Приветственное сообщение отправлено в канал!")
-        logger.info(f"Приветствие отправлено в канал {CHANNEL_ID}")
+        logger.info(f"Приветствие отправлено в канал {channel_id}")
     except Exception as e:
         await callback.message.answer(f"❌ Ошибка: {e}")
         logger.error(f"Не удалось отправить приветствие: {e}")

@@ -3,37 +3,45 @@
 ## Задача: Улучшение функционала приветствий (версия протокола 5.0.0)
 
 ## Выполнено:
-- [x] Таймер на 60 секунд — `delete_after_delay()` в group.py
-- [x] Кнопка "Пройти исповедь" (callback) — `welcome_confession_callback()`
-- [x] Кнопка "Позже" (удаление) — `welcome_later_callback()`
-- [x] Админ-кнопка "Отправить приветствие" — создан `admin.py`
+
+### 1. Автоскрытие приветствия через 60 секунд ✅
+- Добавлена функция `delete_after_delay()` в `group.py`
+- При новом участнике запускается `asyncio.create_task()` с таймером
+- Константа `WELCOME_AUTO_DELETE_DELAY = 60`
+
+### 2. Кнопки в приветствии ✅
+- **"✨ Пройти исповедь"** — callback_data, удаляет сообщение + отправляет инструкцию в ЛС
+- **"⏳ Позже"** — удаляет сообщение сразу
+
+### 3. Кнопка в админ-панели ✅
+- Добавлена кнопка **"📢 Отправить приветствие"**
+- Отправляет приветственное сообщение в канал
+- Подключена к `/admin` меню
+
+### 4. Сохранение CHANNEL_ID в .env ✅
+- `CHANNEL_ID` добавлен в `config.py` как настройка
+- Создан общий модуль `context.py` для хранения ID канала
+- При добавлении бота админом — ID автоматически запоминается
+- При перезапуске — читается из `.env`
+
+### 5. Документация ✅
+- `.env.example` — заглушка с инструкцией
+- `.github/secrets/README.md` — инструкция по настройке секретов
+- `README.md` — секция TODO / Доработки
 
 ## Изменённые файлы:
-1. **bot/handlers/group.py**
-   - Добавлен `asyncio` import
-   - Добавлена константа `WELCOME_AUTO_DELETE_DELAY = 60`
-   - Функция `delete_after_delay()` — удаляет сообщение через delay
-   - Обновлена `get_welcome_keyboard()` — callback_data вместо url
-   - Обновлён `new_member_joined()` — запускает таймер через `asyncio.create_task()`
-   - Добавлен `welcome_confession_callback()` — удаляет сообщение, отправляет инструкцию в ЛС
 
-2. **bot/handlers/admin.py** (новый файл)
-   - `AdminSendWelcomeStates` — FSM состояние
-   - `admin_send_welcome_start()` — обработка callback "admin_send_welcome"
-   - `process_welcome_target()` — обработка пересланного сообщения/ID
-   - Поддержка: forward, reply, числовой ID
+| Файл | Изменение |
+|------|-----------|
+| `bot/handlers/group.py` | Автоскрытие, callback кнопки |
+| `bot/handlers/admin.py` | Новый файл — обработка кнопки |
+| `bot/handlers/common.py` | Добавлена кнопка в админ-меню |
+| `bot/handlers/context.py` | Новый файл — общий CHANNEL_ID |
+| `bot/config.py` | Добавлен CHANNEL_ID |
+| `bot/main.py` | Подключен admin_router |
+| `.env.example` | Добавлен CHANNEL_ID |
+| `.github/secrets/README.md` | Новый файл |
+| `README.md` | Добавлен TODO |
 
-3. **bot/handlers/common.py**
-   - Обновлена `get_admin_keyboard()` — добавлена кнопка "📢 Отправить приветствие"
-
-4. **bot/main.py**
-   - Добавлен import `admin_router`
-   - Подключён роутер: `dp.include_router(admin_router)`
-
-## Тесты:
-- Автоскрытие через 60 сек: требует ручного тестирования
-- Кнопки работают: требует ручного тестирования
-- Админ отправка: требует ручного тестирования
-
-## Версия протокола: 5.0.1
+## Версия протокола: 5.0.2
 ## Статус: ГОТОВО ✅

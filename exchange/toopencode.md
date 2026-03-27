@@ -1,193 +1,146 @@
 # Инструкция для Opencode Agent
 
-**Версия протокола:** 5.0.0
-**Приоритет:** ВЫСОКИЙ
+**Версия протокола:** 5.2.0
+**Приоритет:** КРИТИЧЕСКИЙ
 **Дата:** 2026-03-20
 
 ---
 
-## 📋 ЗАДАЧА: Улучшение функционала приветствий
+## 📋 ЗАДАЧА: Создание миграции для member_events
 
 ---
 
-## 🎯 ТРЕБОВАНИЯ
+## 🐛 ПРОБЛЕМА
 
-### 1. Кнопка "Приветствие" в админ-панели
+**Отчёт показывает 0 покинувших, хотя бот логирует выход.**
 
-**Где:** /admin меню
+**Причина:** Таблица `member_events` **НЕ СУЩЕСТВУЕТ** в БД!
 
-**Функция:**
-- Кнопка "📢 Отправить приветствие"
-- После нажатия — поле для ввода ID пользователя или пересылки сообщения
-- Бот отправляет приветствие выбранному пользователю в ЛС
-
-### 2. Автоскрытие приветствия через 60 секунд
-
-**Логика:**
-- Бот отправляет приветствие новому участнику
-- Запускается таймер на 60 секунд
-- Если пользователь **НЕ нажал** кнопку → сообщение удаляется автоматически
-- Если пользователь **НАЖАЛ** кнопку → сообщение удаляется сразу
+Миграция `001_initial.py` создаёт только таблицу `complaints`.
 
 ---
 
-## 🔧 РЕАЛИЗАЦИЯ
+## 🔧 ИСПРАВЛЕНИЯ
 
-### 1. Изменить `bot/handlers/group.py`
+### 1. Создать миграцию для member_events
 
-**Добавить таймер на удаление:**
+```bash
+cd /project/otchebot
 
-```python
-import asyncio
+# Создать файл миграции
+cat > alembic/versions/002_member_events.py << 'EOF'
+"""Create member_events table
 
-@router.new_chat_members()
-async def new_member_joined(message: types.Message):
-    """Новый участник в группе."""
-    for member in message.new_chat_members:
-        if member.is_bot:
-            continue
-        
-        welcome_text = (
-            f"👋 Привет, {member.mention_html()}!\n\n"
-            "Я бот ОТЧЕБОТ — помогаю пользователям IT-сферы.\n\n"
-            "Если у вас есть проблема — пройдите исповедь."
-        )
-        
-        sent_message = await message.answer(
-            welcome_text,
-            reply_markup=get_welcome_keyboard()
-        )
-        
-        # Запланировать удаление через 60 секунд
-        asyncio.create_task(delete_after_delay(sent_message, 60))
-        
-        logger.info(f"Приветствие нового участника: {member.id}")
+Revision ID: 002_member_events
+Revises: 001_initial
+Create Date: 2026-03-20 00:00:00.000000
+
+"""
+from typing import Sequence, Union
+
+from alembic import op
+import sqlalchemy as sa
 
 
-async def delete_after_delay(message: types.Message, delay: int):
-    """Удалить сообщение через задержку."""
-    await asyncio.sleep(delay)
-    try:
-        await message.delete()
-        logger.info(f"Автоскрытие приветствия: {message.message_id}")
-    except Exception as e:
-        logger.warning(f"Не удалось удалить сообщение: {e}")
+# revision identifiers, used by Alembic.
+revision: str = '002_member_events'
+down_revision: Union[str, None] = '001_initial'
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
 
 
-@router.callback_query(F.data == "welcome_later")
-async def welcome_later_callback(callback: types.CallbackQuery):
-    """Пользователь нажал 'Позже'."""
-    await callback.message.delete()
-    await callback.answer("Хорошо, обращайтесь в любое время!")
+class MemberEventType(enum.Enum):
+    JOINED = "joined"
+    LEFT = "left"
 
 
-@router.callback_query(F.data == "welcome_confession")
-async def welcome_confession_callback(callback: types.CallbackQuery):
-    """Пользователь нажал 'Пройти исповедь'."""
-    await callback.message.delete()
-    
-    # Отправить инструкцию в ЛС
-    await callback.bot.send_message(
-        chat_id=callback.from_user.id,
-        text="✨ Добро пожаловать в ОТЧЕБОТ!\n\n"
-             "Нажмите /start чтобы начать исповедь."
+def upgrade() -> None:
+    # Создание enum типа для событий
+    member_event_type = sa.Enum('joined', 'left', name='member_event_type')
+    member_event_type.create(op.get_bind())
+
+    # Создание таблицы member_events
+    op.create_table(
+        'member_events',
+        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column('user_id', sa.BigInteger(), nullable=False),
+        sa.Column('username', sa.String(length=255), nullable=True),
+        sa.Column('first_name', sa.String(length=255), nullable=True),
+        sa.Column('event_type', sa.Enum('joined', 'left', name='member_event_type'), nullable=False),
+        sa.Column('chat_id', sa.BigInteger(), nullable=False),
+        sa.Column('created_at', sa.DateTime(), server_default=sa.func.now(), nullable=False),
+        sa.PrimaryKeyConstraint('id')
     )
-    await callback.answer()
+
+    # Создание индексов
+    op.create_index(op.f('ix_member_events_event_type'), 'member_events', ['event_type'], unique=False)
+    op.create_index(op.f('ix_member_events_user_id'), 'member_events', ['user_id'], unique=False)
+    op.create_index(op.f('ix_member_events_created_at'), 'member_events', ['created_at'], unique=False)
+
+
+def downgrade() -> None:
+    # Удаление индексов
+    op.drop_index(op.f('ix_member_events_created_at'), table_name='member_events')
+    op.drop_index(op.f('ix_member_events_user_id'), table_name='member_events')
+    op.drop_index(op.f('ix_member_events_event_type'), table_name='member_events')
+
+    # Удаление таблицы
+    op.drop_table('member_events')
+
+    # Удаление enum типа
+    member_event_type = sa.Enum('joined', 'left', name='member_event_type')
+    member_event_type.drop(op.get_bind())
+EOF
 ```
 
-**Обновить клавиатуру:**
+### 2. Применить миграцию
 
-```python
-def get_welcome_keyboard() -> InlineKeyboardMarkup:
-    builder = InlineKeyboardBuilder()
-    builder.add(
-        InlineKeyboardButton(
-            text="✨ Пройти исповедь",
-            callback_data="welcome_confession"
-        )
-    )
-    builder.add(
-        InlineKeyboardButton(
-            text="⏳ Позже",
-            callback_data="welcome_later"
-        )
-    )
-    builder.adjust(2)
-    return builder.as_markup()
+```bash
+cd /project/otchebot
+
+# Перезапустить бота с применением миграций
+docker-compose restart bot
+
+# Или применить вручную
+docker-compose exec bot alembic upgrade head
 ```
 
-### 2. Добавить в `bot/handlers/admin.py`
+### 3. Проверить
 
-```python
-@router.callback_query(F.data == "admin_send_welcome")
-async def admin_send_welcome(callback: CallbackQuery):
-    """Админ хочет отправить приветствие пользователю."""
-    await callback.message.answer(
-        "📢 Отправить приветствие\n\n"
-        "Перешлите сообщение пользователя или введите его Telegram ID:"
-    )
-    await callback.answer()
+```bash
+# Проверить таблицу
+docker-compose exec postgres psql -U otchebot_user -d otchebot -c "\dt"
 
+# Ожидается: member_events
 
-@router.message(F.forward_from | F.reply_to_message)
-async def process_welcome_target(message: Message, state: FSMContext):
-    """Получатель для приветствия определён."""
-    target_user = None
-    
-    if message.forward_from:
-        target_user = message.forward_from.id
-    elif message.reply_to_message:
-        target_user = message.reply_to_message.from_user.id
-    
-    if target_user:
-        try:
-            await message.bot.send_message(
-                chat_id=target_user,
-                text="👋 Приветствие от админа!\n\n"
-                     "Я бот ОТЧЕБОТ — помогаю пользователям IT-сферы.\n\n"
-                     "Если у вас есть проблема — пройдите исповедь.\n"
-                     "Нажмите /start чтобы начать.",
-                reply_markup=get_welcome_keyboard()
-            )
-            await message.answer(f"✅ Приветствие отправлено пользователю {target_user}")
-        except Exception as e:
-            await message.answer(f"❌ Ошибка: {e}")
-```
-
-### 3. Обновить меню админки
-
-Добавить кнопку в `get_admin_keyboard()`:
-
-```python
-InlineKeyboardButton(text="📢 Отправить приветствие", callback_data="admin_send_welcome")
+# Проверить миграции
+docker-compose exec bot alembic current
 ```
 
 ---
 
 ## 🧪 ТЕСТЫ
 
-### Тест 1: Автоскрытие через 60 сек
+### Тест 1: Таблица создана
 
-1. Добавить нового бота в группу (для теста)
-2. **Ожидается:** Через 60 сек приветствие удалится
+```bash
+docker-compose exec postgres psql -U otchebot_user -d otchebot -c "SELECT count(*) FROM member_events;"
+```
 
-### Тест 2: Кнопка "Позже"
+### Тест 2: Выход фиксируется
 
-1. Нажать "⏳ Позже"
-2. **Ожидается:** Сообщение удаляется сразу
+1. Выйти из группы
+2. Проверить логи: `🚪 Участник покинул`
+3. Проверить БД: `SELECT * FROM member_events WHERE event_type='left';`
 
-### Тест 3: Кнопка "Пройти исповедь"
+### Тест 3: Отчёт верный
 
-1. Нажать "✨ Пройти исповедь"
-2. **Ожидается:** 
-   - Сообщение удаляется
-   - В ЛС приходит инструкция
+```bash
+# Отправить тестовый отчёт
+/test_report
+```
 
-### Тест 4: Админ отправляет приветствие
-
-1. /admin → "📢 Отправить приветствие"
-2. Переслать сообщение пользователя
-3. **Ожидается:** Пользователь получил приветствие в ЛС
+**Ожидается:** Правильное количество покинувших
 
 ---
 
@@ -198,20 +151,20 @@ InlineKeyboardButton(text="📢 Отправить приветствие", call
 ```markdown
 # Отчёт Opencode Agent
 
-## Задача: Улучшение приветствий
+## Задача: Миграция member_events
 
 ## Выполнено:
-- [ ] Таймер на 60 секунд
-- [ ] Кнопка "Пройти исповедь" (callback)
-- [ ] Кнопка "Позже" (удаление)
-- [ ] Админ-кнопка "Отправить приветствие"
+- [ ] alembic/versions/002_member_events.py создана
+- [ ] Миграция применена
+- [ ] Таблица существует
+- [ ] Бот перезапущен
 
 ## Тесты:
-- Автоскрытие: ✅/❌
-- Кнопки работают: ✅/❌
-- Админ отправка: ✅/❌
+- Таблица: ✅/❌
+- Выход фиксируется: ✅/❌
+- Отчёт верный: ✅/❌
 
-## Версия протокола: 5.0.1
+## Версия протокола: 5.2.1
 ## Статус: [ГОТОВО / ПРОБЛЕМЫ]
 ```
 
